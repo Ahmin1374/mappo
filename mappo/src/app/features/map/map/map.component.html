@@ -1,0 +1,47 @@
+<div class="map-container">
+  <!-- Map Status Bar -->
+  <div class="map-status-bar">
+    <div class="status-item">
+      <span class="status-label">Status:</span>
+      <span class="status-value" [class.initialized]="isMapInitialized()">
+        {{ isMapInitialized() ? 'Ready' : 'Initializing...' }}
+      </span>
+    </div>
+    <div class="status-item">
+      <span class="status-label">Shapes:</span>
+      <span class="status-value">{{ getShapeCount() }}</span>
+    </div>
+    <div class="status-item">
+      <button 
+        class="clear-btn" 
+        (click)="clearAllShapes()" 
+        [disabled]="getShapeCount() === 0"
+        title="Clear all drawn shapes">
+        Clear All
+      </button>
+    </div>
+  </div>
+
+  <!-- Map Container -->
+  <div 
+    #mapContainer 
+    id="map" 
+    class="map-view">
+  </div>
+
+  <!-- Instructions Panel -->
+  <div class="instructions-panel">
+    <h3>Drawing Instructions</h3>
+    <ul>
+      <li>Use the drawing toolbar on the left to create shapes</li>
+      <li>Click the <strong>Polygon</strong> tool to draw custom polygons</li>
+      <li>Click the <strong>Rectangle</strong> tool to draw rectangles</li>
+      <li>Click and drag to create shapes</li>
+      <li>Double-click to finish drawing a polygon</li>
+      <li>Use the edit tools to modify or delete shapes</li>
+    </ul>
+    <p class="note">
+      <strong>Note:</strong> All drawn shapes are automatically converted to GeoJSON format and logged to the console.
+    </p>
+  </div>
+</div>
