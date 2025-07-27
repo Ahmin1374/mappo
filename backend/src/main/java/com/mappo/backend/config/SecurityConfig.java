@@ -1,7 +1,6 @@
 package com.mappo.backend.config;
 
 import com.mappo.backend.security.JwtAuthenticationFilter;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -23,11 +22,9 @@ import java.util.Arrays;
 @EnableWebSecurity
 public class SecurityConfig {
     
-    @Autowired
-    private JwtAuthenticationFilter jwtAuthFilter;
-    
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, 
+                                                  JwtAuthenticationFilter jwtAuthFilter) throws Exception {
         http
             .cors().and()
             .csrf().disable()

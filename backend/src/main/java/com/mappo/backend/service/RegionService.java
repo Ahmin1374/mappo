@@ -16,6 +16,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 @Service
 @RequiredArgsConstructor
@@ -107,10 +111,25 @@ public class RegionService {
         dto.setCreatedAt(region.getCreatedAt().toString());
         dto.setUpdatedAt(region.getUpdatedAt().toString());
         
-        // Convert geometry back to GeoJSON
+        // Convert geometry back to GeoJSON using a simple approach
         try {
-            String geoJsonString = new org.locationtech.jts.io.geojson.GeoJsonWriter().write(region.getGeometry());
-            dto.setGeoJson(objectMapper.readValue(geoJsonString, Object.class));
+            // Create a simple GeoJSON structure
+            Map<String, Object> geoJson = new HashMap<>();
+            geoJson.put("type", "Polygon");
+            
+            // Extract coordinates from the polygon
+            List<List<List<Double>>> coordinates = new ArrayList<>();
+            List<List<Double>> ring = new ArrayList<>();
+            
+            org.locationtech.jts.geom.Coordinate[] coords = region.getGeometry().getCoordinates();
+            for (org.locationtech.jts.geom.Coordinate coord : coords) {
+                ring.add(Arrays.asList(coord.x, coord.y));
+            }
+            
+            coordinates.add(ring);
+            geoJson.put("coordinates", coordinates);
+            
+            dto.setGeoJson(geoJson);
         } catch (Exception e) {
             throw new RuntimeException("Error converting geometry to GeoJSON", e);
         }

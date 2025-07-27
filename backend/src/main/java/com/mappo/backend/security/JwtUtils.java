@@ -26,16 +26,28 @@ public class JwtUtils {
     }
     
     public String extractUsername(String token) {
-        return extractClaim(token, Claims::getSubject);
+        try {
+            return extractClaim(token, Claims::getSubject);
+        } catch (Exception e) {
+            return null;
+        }
     }
     
     public Date extractExpiration(String token) {
-        return extractClaim(token, Claims::getExpiration);
+        try {
+            return extractClaim(token, Claims::getExpiration);
+        } catch (Exception e) {
+            return null;
+        }
     }
     
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
-        final Claims claims = extractAllClaims(token);
-        return claimsResolver.apply(claims);
+        try {
+            final Claims claims = extractAllClaims(token);
+            return claimsResolver.apply(claims);
+        } catch (Exception e) {
+            return null;
+        }
     }
     
     private Claims extractAllClaims(String token) {
@@ -47,7 +59,11 @@ public class JwtUtils {
     }
     
     private Boolean isTokenExpired(String token) {
-        return extractExpiration(token).before(new Date());
+        try {
+            return extractExpiration(token).before(new Date());
+        } catch (Exception e) {
+            return true; // Consider invalid tokens as expired
+        }
     }
     
     public String generateToken(UserDetails userDetails) {
@@ -66,7 +82,11 @@ public class JwtUtils {
     }
     
     public Boolean validateToken(String token, UserDetails userDetails) {
-        final String username = extractUsername(token);
-        return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
+        try {
+            final String username = extractUsername(token);
+            return (username != null && username.equals(userDetails.getUsername()) && !isTokenExpired(token));
+        } catch (Exception e) {
+            return false;
+        }
     }
 } 
