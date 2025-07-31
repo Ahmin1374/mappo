@@ -1,1 +1,15 @@
-<app-map></app-map>
+<div class="app-container">
+  <nav class="navbar" *ngIf="currentUser$ | async as user">
+    <div class="nav-brand">
+      <h1>Mappo</h1>
+    </div>
+    <div class="nav-user">
+      <span class="username">Welcome, {{ user.username }}</span>
+      <button class="logout-btn" (click)="logout()">Logout</button>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <router-outlet></router-outlet>
+  </main>
+</div>

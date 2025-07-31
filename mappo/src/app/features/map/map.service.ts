@@ -1,6 +1,8 @@
 import { Injectable, EventEmitter } from '@angular/core';
 import * as L from 'leaflet';
 import 'leaflet-draw';
+import { RegionService, RegionDto } from '../../services/region.service';
+import { Observable } from 'rxjs';
 
 export interface GeoJSONFeature {
   type: 'Feature';
@@ -29,11 +31,13 @@ export class MapService {
   private map: L.Map | null = null;
   private drawControl: L.Control.Draw | null = null;
   private drawnItems: L.FeatureGroup = new L.FeatureGroup();
+  private regionLayers: Map<string, L.Layer> = new Map(); // Track region layers by ID
   
   // Events
   public onShapeCreated = new EventEmitter<GeoJSONFeature>();
   public onShapeDeleted = new EventEmitter<string>();
   public onMapInitialized = new EventEmitter<void>();
+  public onRegionsLoaded = new EventEmitter<RegionDto[]>();
 
   // Default configuration for Germany
   private defaultConfig: MapConfig = {
@@ -43,7 +47,7 @@ export class MapService {
     maxZoom: 18
   };
 
-  constructor() {}
+  constructor(private regionService: RegionService) {}
 
   /**
    * Initialize the map in the specified container
@@ -66,6 +70,9 @@ export class MapService {
 
     // Initialize drawing controls
     this.initializeDrawControls();
+
+    // Load existing regions
+    this.loadRegions();
 
     // Emit initialization event
     this.onMapInitialized.emit();
@@ -214,6 +221,102 @@ export class MapService {
    */
   private generateId(): string {
     return `shape_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  /**
+   * Load regions from backend and display them on the map
+   */
+  public loadRegions(): void {
+    this.regionService.getRegions().subscribe({
+      next: (response) => {
+        this.displayRegions(response.content);
+        this.onRegionsLoaded.emit(response.content);
+      },
+      error: (error) => {
+        console.error('Error loading regions:', error);
+      }
+    });
+  }
+
+  /**
+   * Display regions on the map
+   */
+  private displayRegions(regions: RegionDto[]): void {
+    regions.forEach(region => {
+      if (region.geoJson && region.geoJson.coordinates) {
+        const layer = this.createLayerFromGeoJSON(region.geoJson, region);
+        if (layer) {
+          this.drawnItems.addLayer(layer);
+          this.regionLayers.set(region.id!, layer);
+        }
+      }
+    });
+  }
+
+  /**
+   * Create a Leaflet layer from GeoJSON
+   */
+  private createLayerFromGeoJSON(geoJson: any, region: RegionDto): L.Layer | null {
+    try {
+      const layer = L.geoJSON(geoJson as any, {
+        style: {
+          color: '#3388ff',
+          fillColor: '#3388ff',
+          fillOpacity: 0.2,
+          weight: 2
+        },
+        onEachFeature: (feature, layer) => {
+          if (region.name) {
+            layer.bindPopup(`<b>${region.name}</b><br>Created: ${region.createdAt}`);
+          }
+        }
+      });
+      return layer;
+    } catch (error) {
+      console.error('Error creating layer from GeoJSON:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Save a drawn shape to the backend
+   */
+  public saveRegion(feature: GeoJSONFeature, name: string): Observable<RegionDto> {
+    const regionDto: RegionDto = {
+      name: name,
+      geoJson: feature.geometry
+    };
+
+    return this.regionService.createRegion(regionDto);
+  }
+
+  /**
+   * Delete a region from the backend
+   */
+  public deleteRegion(regionId: string): Observable<void> {
+    return this.regionService.deleteRegion(regionId);
+  }
+
+  /**
+   * Load regions within current map bounds
+   */
+  public loadRegionsInBounds(): void {
+    if (!this.map) return;
+
+    const bounds = this.map.getBounds();
+    this.regionService.getRegionsInBounds(
+      bounds.getWest(),
+      bounds.getSouth(),
+      bounds.getEast(),
+      bounds.getNorth()
+    ).subscribe({
+      next: (regions) => {
+        this.displayRegions(regions);
+      },
+      error: (error) => {
+        console.error('Error loading regions in bounds:', error);
+      }
+    });
   }
 
   /**

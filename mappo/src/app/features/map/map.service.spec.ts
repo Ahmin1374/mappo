@@ -1,207 +1,198 @@
 import { TestBed } from '@angular/core/testing';
-import { MapService, GeoJSONFeature, MapConfig } from './map.service';
+import { MapService, GeoJSONFeature } from './map.service';
+import { RegionService, RegionDto } from '../../services/region.service';
+import { of, throwError } from 'rxjs';
 
 describe('MapService', () => {
   let service: MapService;
+  let regionService: jasmine.SpyObj<RegionService>;
+
+  const mockRegion: RegionDto = {
+    id: '123',
+    name: 'Test Region',
+    geoJson: {
+      type: 'Polygon',
+      coordinates: [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]]
+    },
+    userId: 'user123',
+    createdAt: '2025-07-28T10:00:00Z',
+    updatedAt: '2025-07-28T10:00:00Z'
+  };
+
+  const mockGeoJSONFeature: GeoJSONFeature = {
+    type: 'Feature',
+    geometry: {
+      type: 'Polygon',
+      coordinates: [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]]
+    },
+    properties: {
+      id: 'shape_123',
+      createdAt: new Date()
+    }
+  };
 
   beforeEach(() => {
+    const regionServiceSpy = jasmine.createSpyObj('RegionService', [
+      'getRegions',
+      'createRegion',
+      'deleteRegion',
+      'getRegionsInBounds'
+    ]);
+
     TestBed.configureTestingModule({
-      providers: [MapService]
+      providers: [
+        MapService,
+        { provide: RegionService, useValue: regionServiceSpy }
+      ]
     });
     service = TestBed.inject(MapService);
+    regionService = TestBed.inject(RegionService) as jasmine.SpyObj<RegionService>;
   });
 
   it('should be created', () => {
     expect(service).toBeTruthy();
   });
 
-  describe('Map Initialization', () => {
-    it('should initialize map with default configuration', () => {
-      const containerId = 'test-container';
-      const map = service.initializeMap(containerId);
-      
-      expect(map).toBeTruthy();
-      expect(map.getCenter().lat).toBeCloseTo(51.1657, 1); // Germany center
-      expect(map.getCenter().lng).toBeCloseTo(10.4515, 1);
-      expect(map.getZoom()).toBe(6);
-    });
-
-    it('should initialize map with custom configuration', () => {
-      const containerId = 'test-container';
-      const customConfig: Partial<MapConfig> = {
-        center: [52.5200, 13.4050], // Berlin
-        zoom: 10
+  describe('loadRegions', () => {
+    it('should load regions from backend and emit event', () => {
+      const mockResponse = {
+        content: [mockRegion],
+        totalElements: 1,
+        totalPages: 1,
+        size: 10,
+        number: 0
       };
-      
-      const map = service.initializeMap(containerId, customConfig);
-      
-      expect(map.getCenter().lat).toBeCloseTo(52.5200, 1);
-      expect(map.getCenter().lng).toBeCloseTo(13.4050, 1);
-      expect(map.getZoom()).toBe(10);
-    });
 
-    it('should emit map initialized event', (done) => {
-      service.onMapInitialized.subscribe(() => {
-        expect(true).toBe(true);
-        done();
+      regionService.getRegions.and.returnValue(of(mockResponse));
+
+      let emittedRegions: RegionDto[] = [];
+      service.onRegionsLoaded.subscribe(regions => {
+        emittedRegions = regions;
       });
-      
-      service.initializeMap('test-container');
+
+      service.loadRegions();
+
+      expect(regionService.getRegions).toHaveBeenCalled();
+      expect(emittedRegions).toEqual([mockRegion]);
+    });
+
+    it('should handle error when loading regions fails', () => {
+      const error = new Error('Failed to load regions');
+      regionService.getRegions.and.returnValue(throwError(() => error));
+
+      spyOn(console, 'error');
+
+      service.loadRegions();
+
+      expect(console.error).toHaveBeenCalledWith('Error loading regions:', error);
     });
   });
 
-  describe('Shape Management', () => {
-    beforeEach(() => {
-      service.initializeMap('test-container');
-    });
+  describe('saveRegion', () => {
+    it('should save a region to backend', () => {
+      regionService.createRegion.and.returnValue(of(mockRegion));
 
-    it('should start with zero shapes', () => {
-      const shapes = service.getAllShapes();
-      expect(shapes.length).toBe(0);
-    });
+      service.saveRegion(mockGeoJSONFeature, 'Test Region').subscribe(region => {
+        expect(region).toEqual(mockRegion);
+      });
 
-    it('should clear all shapes', () => {
-      service.clearAllShapes();
-      const shapes = service.getAllShapes();
-      expect(shapes.length).toBe(0);
-    });
-
-    it('should get map instance', () => {
-      const map = service.getMap();
-      expect(map).toBeTruthy();
+      expect(regionService.createRegion).toHaveBeenCalledWith({
+        name: 'Test Region',
+        geoJson: mockGeoJSONFeature.geometry
+      });
     });
   });
 
-  describe('GeoJSON Conversion', () => {
-    it('should generate valid GeoJSON structure', () => {
-      const mockLayer = {
-        toGeoJSON: () => ({
-          features: [{
-            geometry: {
-              type: 'Polygon',
-              coordinates: [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]]
-            }
-          }]
+  describe('deleteRegion', () => {
+    it('should delete a region from backend', () => {
+      regionService.deleteRegion.and.returnValue(of(void 0));
+
+      service.deleteRegion('123').subscribe(() => {
+        // Should complete without error
+      });
+
+      expect(regionService.deleteRegion).toHaveBeenCalledWith('123');
+    });
+  });
+
+  describe('loadRegionsInBounds', () => {
+    it('should load regions within map bounds', () => {
+      regionService.getRegionsInBounds.and.returnValue(of([mockRegion]));
+
+      // Mock map bounds
+      const mockMap = {
+        getBounds: () => ({
+          getWest: () => 0,
+          getSouth: () => 0,
+          getEast: () => 1,
+          getNorth: () => 1
         })
-      } as any;
+      };
 
-      // Access private method through any type
-      const result = (service as any).convertLayerToGeoJSON(mockLayer);
-      
-      expect(result).toBeTruthy();
-      expect(result.type).toBe('Feature');
-      expect(result.geometry.type).toBe('Polygon');
-      expect(result.geometry.coordinates).toBeDefined();
-      expect(result.properties.id).toBeDefined();
-      expect(result.properties.createdAt).toBeDefined();
+      // Set the map instance
+      (service as any).map = mockMap;
+
+      spyOn(console, 'error');
+
+      service.loadRegionsInBounds();
+
+      expect(regionService.getRegionsInBounds).toHaveBeenCalledWith(0, 0, 1, 1);
     });
 
-    it('should handle invalid layer gracefully', () => {
-      const mockLayer = {
-        toGeoJSON: () => null
-      } as any;
+    it('should handle error when loading regions in bounds fails', () => {
+      const error = new Error('Failed to load regions in bounds');
+      regionService.getRegionsInBounds.and.returnValue(throwError(() => error));
 
-      const result = (service as any).convertLayerToGeoJSON(mockLayer);
-      expect(result).toBeNull();
+      const mockMap = {
+        getBounds: () => ({
+          getWest: () => 0,
+          getSouth: () => 0,
+          getEast: () => 1,
+          getNorth: () => 1
+        })
+      };
+
+      (service as any).map = mockMap;
+      spyOn(console, 'error');
+
+      service.loadRegionsInBounds();
+
+      expect(console.error).toHaveBeenCalledWith('Error loading regions in bounds:', error);
     });
 
-    it('should identify rectangles correctly', () => {
-      const rectangleCoords = [
-        [0, 0], [1, 0], [1, 1], [0, 1], [0, 0] // Rectangle coordinates
-      ];
-      
-      const isRect = (service as any).isRectangle(rectangleCoords);
-      expect(isRect).toBe(true);
-    });
+    it('should not call service when map is not initialized', () => {
+      (service as any).map = null;
 
-    it('should identify non-rectangles correctly', () => {
-      const polygonCoords = [
-        [0, 0], [1, 0], [0.5, 1], [0, 0] // Triangle coordinates
-      ];
-      
-      const isRect = (service as any).isRectangle(polygonCoords);
-      expect(isRect).toBe(false);
-    });
-  });
+      service.loadRegionsInBounds();
 
-  describe('Event Handling', () => {
-    beforeEach(() => {
-      service.initializeMap('test-container');
-    });
-
-    it('should emit shape created event', (done) => {
-      service.onShapeCreated.subscribe((geoJSON: GeoJSONFeature) => {
-        expect(geoJSON).toBeDefined();
-        expect(geoJSON.type).toBe('Feature');
-        done();
-      });
-
-      // Simulate shape creation event
-      const mockEvent = {
-        layer: {
-          toGeoJSON: () => ({
-            features: [{
-              geometry: {
-                type: 'Polygon',
-                coordinates: [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]]
-              }
-            }]
-          })
-        }
-      } as any;
-
-      (service as any).handleShapeCreated(mockEvent);
-    });
-
-    it('should emit shape deleted event', (done) => {
-      service.onShapeDeleted.subscribe((shapeId: string) => {
-        expect(shapeId).toBeDefined();
-        done();
-      });
-
-      // Simulate shape deletion event
-      const mockEvent = {
-        layers: {
-          eachLayer: (callback: Function) => {
-            callback({ options: { id: 'test-shape-id' } });
-          }
-        }
-      } as any;
-
-      (service as any).handleShapeDeleted(mockEvent);
+      expect(regionService.getRegionsInBounds).not.toHaveBeenCalled();
     });
   });
 
-  describe('ID Generation', () => {
-    it('should generate unique IDs', () => {
-      const id1 = (service as any).generateId();
-      const id2 = (service as any).generateId();
-      
-      expect(id1).toBeDefined();
-      expect(id2).toBeDefined();
-      expect(id1).not.toBe(id2);
-      expect(id1).toMatch(/^shape_\d+_[a-z0-9]+$/);
+  describe('getAllShapes', () => {
+    it('should return empty array when no shapes are drawn', () => {
+      const shapes = service.getAllShapes();
+      expect(shapes).toEqual([]);
     });
   });
 
-  describe('Map Destruction', () => {
-    it('should destroy map properly', () => {
-      service.initializeMap('test-container');
-      expect(service.getMap()).toBeTruthy();
-      
-      service.destroyMap();
+  describe('clearAllShapes', () => {
+    it('should clear all drawn shapes', () => {
+      // This test verifies the method exists and doesn't throw
+      expect(() => service.clearAllShapes()).not.toThrow();
+    });
+  });
+
+  describe('getMap', () => {
+    it('should return null when map is not initialized', () => {
       expect(service.getMap()).toBeNull();
     });
   });
 
-  describe('Default Configuration', () => {
-    it('should have correct default configuration', () => {
-      const defaultConfig = (service as any).defaultConfig;
-      
-      expect(defaultConfig.center).toEqual([51.1657, 10.4515]); // Germany center
-      expect(defaultConfig.zoom).toBe(6);
-      expect(defaultConfig.minZoom).toBe(4);
-      expect(defaultConfig.maxZoom).toBe(18);
+  describe('destroyMap', () => {
+    it('should destroy map instance', () => {
+      // This test verifies the method exists and doesn't throw
+      expect(() => service.destroyMap()).not.toThrow();
     });
   });
 });

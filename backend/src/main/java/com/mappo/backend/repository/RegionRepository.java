@@ -26,9 +26,9 @@ public interface RegionRepository extends JpaRepository<Region, UUID> {
     List<Region> findByNameContainingIgnoreCase(String name);
     
     /**
-     * Find regions within a bounding box
+     * Find regions within a bounding box using native SQL for PostGIS
      */
-    @Query("SELECT r FROM Region r WHERE ST_Within(r.geometry, ST_MakeEnvelope(:minX, :minY, :maxX, :maxY, 4326))")
+    @Query(value = "SELECT * FROM regions WHERE ST_Within(geometry, ST_MakeEnvelope(:minX, :minY, :maxX, :maxY, 4326))", nativeQuery = true)
     List<Region> findRegionsWithinBounds(
         @Param("minX") double minX, 
         @Param("minY") double minY, 
@@ -37,15 +37,15 @@ public interface RegionRepository extends JpaRepository<Region, UUID> {
     );
     
     /**
-     * Find regions that intersect with a given polygon
+     * Find regions that intersect with a given polygon using native SQL
      */
-    @Query("SELECT r FROM Region r WHERE ST_Intersects(r.geometry, :polygon)")
-    List<Region> findRegionsIntersectingPolygon(@Param("polygon") Polygon polygon);
+    @Query(value = "SELECT * FROM regions WHERE ST_Intersects(geometry, ST_GeomFromText(:polygonWkt, 4326))", nativeQuery = true)
+    List<Region> findRegionsIntersectingPolygon(@Param("polygonWkt") String polygonWkt);
     
     /**
-     * Find regions within a certain distance from a point
+     * Find regions within a certain distance from a point using native SQL
      */
-    @Query("SELECT r FROM Region r WHERE ST_DWithin(r.geometry, ST_Point(:longitude, :latitude), :distance)")
+    @Query(value = "SELECT * FROM regions WHERE ST_DWithin(geometry, ST_Point(:longitude, :latitude), :distance)", nativeQuery = true)
     List<Region> findRegionsWithinDistance(
         @Param("longitude") double longitude,
         @Param("latitude") double latitude,
