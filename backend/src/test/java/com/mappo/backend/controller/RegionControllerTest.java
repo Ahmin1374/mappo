@@ -2,6 +2,8 @@ package com.mappo.backend.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mappo.backend.dto.RegionDto;
+import com.mappo.backend.model.User;
+import com.mappo.backend.security.SecurityUtils;
 import com.mappo.backend.service.RegionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,17 +32,25 @@ class RegionControllerTest {
     @Mock
     private RegionService regionService;
 
+    @Mock
+    private SecurityUtils securityUtils;
+
     @InjectMocks
     private RegionController regionController;
 
     private UUID testUserId;
     private UUID testRegionId;
     private RegionDto testRegionDto;
+    private User testUser;
 
     @BeforeEach
     void setUp() {
         testUserId = UUID.randomUUID();
         testRegionId = UUID.randomUUID();
+        
+        testUser = new User();
+        testUser.setId(testUserId);
+        testUser.setUsername("testuser");
         
         testRegionDto = new RegionDto();
         testRegionDto.setId(testRegionId);
@@ -54,6 +64,7 @@ class RegionControllerTest {
     @Test
     void createRegion_WithValidData_ShouldReturnCreatedRegion() {
         // Given
+        when(securityUtils.getCurrentUser()).thenReturn(Optional.of(testUser));
         when(regionService.createRegion(any(RegionDto.class), any(UUID.class)))
                 .thenReturn(testRegionDto);
 
@@ -72,6 +83,7 @@ class RegionControllerTest {
     @Test
     void getRegion_WhenRegionExists_ShouldReturnRegion() {
         // Given
+        when(securityUtils.getCurrentUser()).thenReturn(Optional.of(testUser));
         when(regionService.getRegionById(eq(testRegionId), any(UUID.class)))
                 .thenReturn(Optional.of(testRegionDto));
 
@@ -89,6 +101,7 @@ class RegionControllerTest {
     @Test
     void getRegion_WhenRegionDoesNotExist_ShouldReturnNotFound() {
         // Given
+        when(securityUtils.getCurrentUser()).thenReturn(Optional.of(testUser));
         when(regionService.getRegionById(eq(testRegionId), any(UUID.class)))
                 .thenReturn(Optional.empty());
 
@@ -105,9 +118,9 @@ class RegionControllerTest {
     @Test
     void getRegions_ShouldReturnPaginatedRegions() {
         // Given
-        List<RegionDto> regions = Arrays.asList(testRegionDto);
-        Page<RegionDto> regionPage = new PageImpl<>(regions);
+        when(securityUtils.getCurrentUser()).thenReturn(Optional.of(testUser));
         Pageable pageable = PageRequest.of(0, 10);
+        Page<RegionDto> regionPage = new PageImpl<>(Arrays.asList(testRegionDto), pageable, 1);
         
         when(regionService.getRegionsByUser(any(UUID.class), any(Pageable.class)))
                 .thenReturn(regionPage);
@@ -163,6 +176,7 @@ class RegionControllerTest {
     @Test
     void updateRegion_WhenRegionExists_ShouldReturnUpdatedRegion() {
         // Given
+        when(securityUtils.getCurrentUser()).thenReturn(Optional.of(testUser));
         RegionDto updateDto = new RegionDto();
         updateDto.setName("Updated Region");
         updateDto.setGeoJson(createTestGeoJson());
@@ -184,6 +198,7 @@ class RegionControllerTest {
     @Test
     void updateRegion_WhenRegionDoesNotExist_ShouldReturnNotFound() {
         // Given
+        when(securityUtils.getCurrentUser()).thenReturn(Optional.of(testUser));
         when(regionService.updateRegion(eq(testRegionId), eq(testRegionDto), any(UUID.class)))
                 .thenReturn(Optional.empty());
 
@@ -200,6 +215,7 @@ class RegionControllerTest {
     @Test
     void deleteRegion_WhenRegionExists_ShouldReturnNoContent() {
         // Given
+        when(securityUtils.getCurrentUser()).thenReturn(Optional.of(testUser));
         when(regionService.deleteRegion(eq(testRegionId), any(UUID.class))).thenReturn(true);
 
         // When
@@ -214,6 +230,7 @@ class RegionControllerTest {
     @Test
     void deleteRegion_WhenRegionDoesNotExist_ShouldReturnNotFound() {
         // Given
+        when(securityUtils.getCurrentUser()).thenReturn(Optional.of(testUser));
         when(regionService.deleteRegion(eq(testRegionId), any(UUID.class))).thenReturn(false);
 
         // When
@@ -228,14 +245,15 @@ class RegionControllerTest {
     @Test
     void getRegionCount_ShouldReturnCorrectCount() {
         // Given
-        when(regionService.countRegionsByUser(any(UUID.class))).thenReturn(5L);
+        when(securityUtils.getCurrentUser()).thenReturn(Optional.of(testUser));
+        when(regionService.countRegionsByUser(any(UUID.class))).thenReturn(1L);
 
         // When
         ResponseEntity<Long> response = regionController.getRegionCount();
 
         // Then
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isEqualTo(5L);
+        assertThat(response.getBody()).isEqualTo(1L);
         
         verify(regionService).countRegionsByUser(any(UUID.class));
     }
