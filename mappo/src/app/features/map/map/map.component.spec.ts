@@ -1,12 +1,15 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { MapComponent } from './map.component';
 import { MapService, GeoJSONFeature } from '../map.service';
+import { RegionService, RegionDto } from '../../../services/region.service';
 import { EventEmitter } from '@angular/core';
 
 describe('MapComponent', () => {
   let component: MapComponent;
   let fixture: ComponentFixture<MapComponent>;
   let mapService: jasmine.SpyObj<MapService>;
+  let regionService: jasmine.SpyObj<RegionService>;
 
   const mockGeoJSON: GeoJSONFeature = {
     type: 'Feature',
@@ -21,7 +24,7 @@ describe('MapComponent', () => {
   };
 
   beforeEach(async () => {
-    const spy = jasmine.createSpyObj('MapService', [
+    const mapServiceSpy = jasmine.createSpyObj('MapService', [
       'initializeMap',
       'clearAllShapes',
       'getAllShapes',
@@ -29,13 +32,23 @@ describe('MapComponent', () => {
     ], {
       onShapeCreated: new EventEmitter<GeoJSONFeature>(),
       onShapeDeleted: new EventEmitter<string>(),
-      onMapInitialized: new EventEmitter<void>()
+      onMapInitialized: new EventEmitter<void>(),
+      onRegionsLoaded: new EventEmitter<RegionDto[]>()
     });
 
+    const regionServiceSpy = jasmine.createSpyObj('RegionService', [
+      'getRegions',
+      'createRegion',
+      'deleteRegion',
+      'getRegionsInBounds'
+    ]);
+
     await TestBed.configureTestingModule({
+      imports: [HttpClientTestingModule],
       declarations: [ MapComponent ],
       providers: [
-        { provide: MapService, useValue: spy }
+        { provide: MapService, useValue: mapServiceSpy },
+        { provide: RegionService, useValue: regionServiceSpy }
       ]
     })
     .compileComponents();
@@ -43,6 +56,7 @@ describe('MapComponent', () => {
     fixture = TestBed.createComponent(MapComponent);
     component = fixture.componentInstance;
     mapService = TestBed.inject(MapService) as jasmine.SpyObj<MapService>;
+    regionService = TestBed.inject(RegionService) as jasmine.SpyObj<RegionService>;
   });
 
   it('should create', () => {
@@ -111,13 +125,10 @@ describe('MapComponent', () => {
     });
 
     it('should clear all shapes', () => {
-      spyOn(console, 'log');
-      
       component.clearAllShapes();
       
       expect(mapService.clearAllShapes).toHaveBeenCalled();
       expect(component.drawnShapes.length).toBe(0);
-      expect(console.log).toHaveBeenCalledWith('All shapes cleared');
     });
 
     it('should get all shapes from service', () => {

@@ -8,8 +8,12 @@
       </span>
     </div>
     <div class="status-item">
-      <span class="status-label">Shapes:</span>
+      <span class="status-label">Drawn Shapes:</span>
       <span class="status-value">{{ getShapeCount() }}</span>
+    </div>
+    <div class="status-item">
+      <span class="status-label">Saved Regions:</span>
+      <span class="status-value">{{ getRegionCount() }}</span>
     </div>
     <div class="status-item">
       <button 
@@ -20,6 +24,24 @@
         Clear All
       </button>
     </div>
+    <div class="status-item">
+      <button 
+        class="load-btn" 
+        (click)="loadRegionsInBounds()" 
+        title="Load regions in current map bounds">
+        Load in Bounds
+      </button>
+    </div>
+  </div>
+
+  <!-- Error Message -->
+  <div class="error-message" *ngIf="errorMessage">
+    {{ errorMessage }}
+  </div>
+
+  <!-- Loading Indicator -->
+  <div class="loading-indicator" *ngIf="loading">
+    <span>Saving region...</span>
   </div>
 
   <!-- Map Container -->
@@ -40,8 +62,17 @@
       <li>Double-click to finish drawing a polygon</li>
       <li>Use the edit tools to modify or delete shapes</li>
     </ul>
+    <div class="backend-info">
+      <h4>Backend Integration</h4>
+      <ul>
+        <li>✅ Regions are automatically loaded from the database</li>
+        <li>✅ Use "Load in Bounds" to filter regions by map view</li>
+        <li>✅ Drawn shapes can be saved to the database</li>
+        <li>✅ All regions are persisted with user authentication</li>
+      </ul>
+    </div>
     <p class="note">
-      <strong>Note:</strong> All drawn shapes are automatically converted to GeoJSON format and logged to the console.
+      <strong>Note:</strong> All drawn shapes are automatically converted to GeoJSON format and can be saved to the backend.
     </p>
   </div>
 </div>

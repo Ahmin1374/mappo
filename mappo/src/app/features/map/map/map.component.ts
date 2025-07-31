@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy, ElementRef, ViewChild, Output, EventEmitter } from '@angular/core';
 import { MapService, GeoJSONFeature } from '../map.service';
+import { RegionService, RegionDto } from '../../../services/region.service';
 
 @Component({
   selector: 'app-map',
@@ -14,8 +15,14 @@ export class MapComponent implements OnInit, OnDestroy {
 
   private mapInitializedFlag = false;
   public drawnShapes: GeoJSONFeature[] = [];
+  public regions: RegionDto[] = [];
+  public loading = false;
+  public errorMessage = '';
 
-  constructor(private mapService: MapService) {}
+  constructor(
+    private mapService: MapService,
+    private regionService: RegionService
+  ) {}
 
   ngOnInit(): void {
     this.initializeMap();
@@ -57,6 +64,11 @@ export class MapComponent implements OnInit, OnDestroy {
     this.mapService.onMapInitialized.subscribe(() => {
       this.handleMapInitialized();
     });
+
+    // Subscribe to regions loaded events
+    this.mapService.onRegionsLoaded.subscribe((regions: RegionDto[]) => {
+      this.handleRegionsLoaded(regions);
+    });
   }
 
   /**
@@ -93,16 +105,52 @@ export class MapComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Handle regions loaded from backend
+   */
+  public handleRegionsLoaded(regions: RegionDto[]): void {
+    this.regions = regions;
+    console.log('Regions loaded from backend:', regions);
+  }
+
+  /**
+   * Save a drawn shape to the backend
+   */
+  public saveShapeToBackend(feature: GeoJSONFeature, name: string): void {
+    this.loading = true;
+    this.errorMessage = '';
+
+    this.mapService.saveRegion(feature, name).subscribe({
+      next: (savedRegion) => {
+        console.log('Region saved successfully:', savedRegion);
+        this.loading = false;
+        // Refresh the regions list
+        this.mapService.loadRegions();
+      },
+      error: (error) => {
+        console.error('Error saving region:', error);
+        this.errorMessage = 'Failed to save region. Please try again.';
+        this.loading = false;
+      }
+    });
+  }
+
+  /**
+   * Load regions within current map bounds
+   */
+  public loadRegionsInBounds(): void {
+    this.mapService.loadRegionsInBounds();
+  }
+
+  /**
    * Clear all drawn shapes
    */
   public clearAllShapes(): void {
     this.mapService.clearAllShapes();
     this.drawnShapes = [];
-    console.log('All shapes cleared');
   }
 
   /**
-   * Get all drawn shapes as GeoJSON
+   * Get all shapes from the map
    */
   public getAllShapes(): GeoJSONFeature[] {
     return this.mapService.getAllShapes();
@@ -116,9 +164,16 @@ export class MapComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Get current shape count
+   * Get the count of drawn shapes
    */
   public getShapeCount(): number {
     return this.drawnShapes.length;
+  }
+
+  /**
+   * Get the count of regions from backend
+   */
+  public getRegionCount(): number {
+    return this.regions.length;
   }
 }
