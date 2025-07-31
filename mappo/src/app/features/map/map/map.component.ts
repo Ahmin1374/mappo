@@ -25,6 +25,10 @@ export class MapComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    console.log('🔍 MapComponent ngOnInit called');
+    console.log('🔍 MapContainer element:', this.mapContainer);
+    console.log('🔍 MapContainer nativeElement:', this.mapContainer?.nativeElement);
+    
     this.initializeMap();
     this.subscribeToEvents();
   }
@@ -38,11 +42,18 @@ export class MapComponent implements OnInit, OnDestroy {
    */
   public initializeMap(): void {
     try {
+      console.log('🔍 Initializing map...');
+      console.log('🔍 Map container element:', this.mapContainer.nativeElement);
+      console.log('🔍 Map container ID:', this.mapContainer.nativeElement.id);
+      
       const containerId = this.mapContainer.nativeElement.id;
-      this.mapService.initializeMap(containerId);
+      const map = this.mapService.initializeMap(containerId);
+      
+      console.log('🔍 Map service returned:', map);
       this.mapInitializedFlag = true;
+      console.log('✅ Map initialized successfully');
     } catch (error) {
-      console.error('Failed to initialize map:', error);
+      console.error('❌ Failed to initialize map:', error);
     }
   }
 

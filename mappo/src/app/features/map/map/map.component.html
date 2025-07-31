@@ -1,4 +1,13 @@
 <div class="map-container">
+  <!-- Debug Info -->
+  <div style="background: yellow; padding: 10px; margin: 10px;">
+    <strong>Debug Info:</strong>
+    <br>Map Initialized: {{ isMapInitialized() }}
+    <br>Shape Count: {{ getShapeCount() }}
+    <br>Region Count: {{ getRegionCount() }}
+    <br>Error: {{ errorMessage }}
+  </div>
+
   <!-- Map Status Bar -->
   <div class="map-status-bar">
     <div class="status-item">
@@ -40,15 +49,17 @@
   </div>
 
   <!-- Loading Indicator -->
-  <div class="loading-indicator" *ngIf="loading">
-    <span>Saving region...</span>
-  </div>
+  <app-loading [isLoading]="loading" message="Saving region..."></app-loading>
 
   <!-- Map Container -->
   <div 
     #mapContainer 
     id="map" 
-    class="map-view">
+    class="map-view"
+    style="border: 2px solid red; min-height: 400px;">
+    <div style="padding: 20px; text-align: center; color: red;">
+      Map Container - If you see this, the map hasn't loaded yet
+    </div>
   </div>
 
   <!-- Instructions Panel -->
