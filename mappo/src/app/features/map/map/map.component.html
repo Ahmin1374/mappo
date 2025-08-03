@@ -1,7 +1,7 @@
 <div class="map-container">
-  <!-- Debug Info -->
-  <div style="background: yellow; padding: 10px; margin: 10px;">
-    <strong>Debug Info:</strong>
+  <!-- Role-based Debug Info -->
+  <div *appRole="'ADMIN'" style="background: yellow; padding: 10px; margin: 10px;">
+    <strong>Admin Debug Info:</strong>
     <br>Map Initialized: {{ isMapInitialized() }}
     <br>Shape Count: {{ getShapeCount() }}
     <br>Region Count: {{ getRegionCount() }}
@@ -24,7 +24,9 @@
       <span class="status-label">Saved Regions:</span>
       <span class="status-value">{{ getRegionCount() }}</span>
     </div>
-    <div class="status-item">
+    
+    <!-- Role-based Controls -->
+    <div class="status-item" *appRole="['ADMIN', 'BROKER']">
       <button 
         class="clear-btn" 
         (click)="clearAllShapes()" 
@@ -33,13 +35,56 @@
         Clear All
       </button>
     </div>
-    <div class="status-item">
+    
+    <div class="status-item" *appRole="['ADMIN', 'BROKER', 'VIEWER']">
       <button 
         class="load-btn" 
         (click)="loadRegionsInBounds()" 
         title="Load regions in current map bounds">
         Load in Bounds
       </button>
+    </div>
+
+    <!-- Admin-only Controls -->
+    <div class="status-item" *appRole="'ADMIN'">
+      <button 
+        class="admin-btn" 
+        (click)="exportRegions()" 
+        title="Export all regions">
+        Export Data
+      </button>
+    </div>
+  </div>
+
+  <!-- Role-based Action Panel -->
+  <div class="action-panel" *appRole="['ADMIN', 'BROKER']">
+    <h4>Region Management</h4>
+    <div class="action-buttons">
+      <button 
+        class="action-btn primary" 
+        (click)="saveCurrentShape()" 
+        [disabled]="getShapeCount() === 0"
+        title="Save the currently selected shape as a region">
+        Save Region
+      </button>
+      <button 
+        class="action-btn secondary" 
+        (click)="editRegions()" 
+        title="Edit existing regions">
+        Edit Regions
+      </button>
+    </div>
+  </div>
+
+  <!-- Viewer-only Info Panel -->
+  <div class="info-panel" *appRole="'VIEWER'">
+    <h4>View Only Mode</h4>
+    <p>You can view regions but cannot create, edit, or delete them.</p>
+    <div class="viewer-stats">
+      <div class="stat-item">
+        <span class="stat-label">Total Regions:</span>
+        <span class="stat-value">{{ getRegionCount() }}</span>
+      </div>
     </div>
   </div>
 
@@ -73,6 +118,28 @@
       <li>Double-click to finish drawing a polygon</li>
       <li>Use the edit tools to modify or delete shapes</li>
     </ul>
+    
+    <!-- Role-based Instructions -->
+    <div class="role-instructions" *appRole="['ADMIN', 'BROKER']">
+      <h4>Admin/Broker Features</h4>
+      <ul>
+        <li>✅ Create new regions by drawing shapes</li>
+        <li>✅ Edit existing regions</li>
+        <li>✅ Delete regions</li>
+        <li>✅ Export region data</li>
+      </ul>
+    </div>
+    
+    <div class="role-instructions" *appRole="'VIEWER'">
+      <h4>Viewer Features</h4>
+      <ul>
+        <li>✅ View all regions</li>
+        <li>✅ Search and filter regions</li>
+        <li>✅ Load regions in map bounds</li>
+        <li>❌ Cannot create, edit, or delete regions</li>
+      </ul>
+    </div>
+    
     <div class="backend-info">
       <h4>Backend Integration</h4>
       <ul>

@@ -3,8 +3,23 @@
     <div class="nav-brand">
       <h1>Mappo</h1>
     </div>
+    <div class="nav-menu">
+      <a routerLink="/map" routerLinkActive="active" class="nav-link">Map</a>
+      <div *appRole="'ADMIN'" class="nav-link admin-link">
+        <span>Admin Panel</span>
+        <div class="dropdown-menu">
+          <a routerLink="/admin/users" class="dropdown-item">User Management</a>
+          <a routerLink="/admin/analytics" class="dropdown-item">Analytics</a>
+        </div>
+      </div>
+    </div>
     <div class="nav-user">
-      <span class="username">Welcome, {{ user.username }}</span>
+      <div class="user-info">
+        <span class="username">{{ user.username }}</span>
+        <span class="role-badge" [class]="'role-' + user.role.toLowerCase()">
+          {{ getRoleDisplayName(user.role) }}
+        </span>
+      </div>
       <button class="logout-btn" (click)="logout()">Logout</button>
     </div>
   </nav>

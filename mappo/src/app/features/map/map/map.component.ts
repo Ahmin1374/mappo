@@ -1,6 +1,8 @@
-import { Component, OnInit, OnDestroy, ElementRef, ViewChild, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { MapService, GeoJSONFeature } from '../map.service';
 import { RegionService, RegionDto } from '../../../services/region.service';
+import { RoleService } from '../../../services/role.service';
+import { EventEmitter } from '@angular/core';
 
 @Component({
   selector: 'app-map',
@@ -9,182 +11,122 @@ import { RegionService, RegionDto } from '../../../services/region.service';
 })
 export class MapComponent implements OnInit, OnDestroy {
   @ViewChild('mapContainer', { static: true }) mapContainer!: ElementRef;
-  @Output() shapeCreated = new EventEmitter<GeoJSONFeature>();
-  @Output() shapeDeleted = new EventEmitter<string>();
-  @Output() mapInitialized = new EventEmitter<void>();
 
-  private mapInitializedFlag = false;
-  public drawnShapes: GeoJSONFeature[] = [];
   public regions: RegionDto[] = [];
   public loading = false;
   public errorMessage = '';
 
   constructor(
-    private mapService: MapService,
-    private regionService: RegionService
+    private mapService: MapService, 
+    private regionService: RegionService,
+    private roleService: RoleService
   ) {}
 
   ngOnInit(): void {
     console.log('🔍 MapComponent ngOnInit called');
     console.log('🔍 MapContainer element:', this.mapContainer);
     console.log('🔍 MapContainer nativeElement:', this.mapContainer?.nativeElement);
-    
     this.initializeMap();
     this.subscribeToEvents();
   }
 
-  ngOnDestroy(): void {
-    this.mapService.destroyMap();
-  }
-
-  /**
-   * Initialize the map in the container
-   */
   public initializeMap(): void {
     try {
       console.log('🔍 Initializing map...');
       console.log('🔍 Map container element:', this.mapContainer.nativeElement);
       console.log('🔍 Map container ID:', this.mapContainer.nativeElement.id);
       
-      const containerId = this.mapContainer.nativeElement.id;
-      const map = this.mapService.initializeMap(containerId);
-      
-      console.log('🔍 Map service returned:', map);
-      this.mapInitializedFlag = true;
-      console.log('✅ Map initialized successfully');
+      this.mapService.initializeMap(this.mapContainer.nativeElement.id);
+      console.log('🔍 Map initialization completed');
     } catch (error) {
-      console.error('❌ Failed to initialize map:', error);
+      console.error('🔍 Error initializing map:', error);
+      this.errorMessage = 'Failed to initialize map';
     }
   }
 
-  /**
-   * Subscribe to map service events
-   */
   public subscribeToEvents(): void {
-    // Subscribe to shape creation events
-    this.mapService.onShapeCreated.subscribe((geoJSON: GeoJSONFeature) => {
-      this.handleShapeCreated(geoJSON);
+    this.mapService.onShapeCreated.subscribe((feature: GeoJSONFeature) => {
+      console.log('🔍 Shape created:', feature);
     });
 
-    // Subscribe to shape deletion events
     this.mapService.onShapeDeleted.subscribe((shapeId: string) => {
-      this.handleShapeDeleted(shapeId);
+      console.log('🔍 Shape deleted:', shapeId);
     });
 
-    // Subscribe to map initialization events
     this.mapService.onMapInitialized.subscribe(() => {
-      this.handleMapInitialized();
+      console.log('🔍 Map initialized event received');
     });
 
-    // Subscribe to regions loaded events
     this.mapService.onRegionsLoaded.subscribe((regions: RegionDto[]) => {
       this.handleRegionsLoaded(regions);
     });
   }
 
-  /**
-   * Handle shape creation
-   */
-  public handleShapeCreated(geoJSON: GeoJSONFeature): void {
-    this.drawnShapes.push(geoJSON);
-    
-    // Log GeoJSON to console as specified in requirements
-    console.log('New shape created:', geoJSON);
-    
-    // Emit event to parent component
-    this.shapeCreated.emit(geoJSON);
-  }
-
-  /**
-   * Handle shape deletion
-   */
-  public handleShapeDeleted(shapeId: string): void {
-    this.drawnShapes = this.drawnShapes.filter(shape => shape.properties.id !== shapeId);
-    
-    console.log('Shape deleted:', shapeId);
-    
-    // Emit event to parent component
-    this.shapeDeleted.emit(shapeId);
-  }
-
-  /**
-   * Handle map initialization
-   */
-  public handleMapInitialized(): void {
-    console.log('Map initialized successfully');
-    this.mapInitialized.emit();
-  }
-
-  /**
-   * Handle regions loaded from backend
-   */
   public handleRegionsLoaded(regions: RegionDto[]): void {
+    console.log('🔍 Regions loaded:', regions);
     this.regions = regions;
-    console.log('Regions loaded from backend:', regions);
+    this.errorMessage = '';
   }
 
-  /**
-   * Save a drawn shape to the backend
-   */
   public saveShapeToBackend(feature: GeoJSONFeature, name: string): void {
     this.loading = true;
     this.errorMessage = '';
 
     this.mapService.saveRegion(feature, name).subscribe({
-      next: (savedRegion) => {
-        console.log('Region saved successfully:', savedRegion);
+      next: (region) => {
+        console.log('🔍 Region saved:', region);
+        this.regions.push(region);
         this.loading = false;
-        // Refresh the regions list
-        this.mapService.loadRegions();
       },
       error: (error) => {
-        console.error('Error saving region:', error);
-        this.errorMessage = 'Failed to save region. Please try again.';
+        console.error('🔍 Error saving region:', error);
+        this.errorMessage = 'Failed to save region';
         this.loading = false;
       }
     });
   }
 
-  /**
-   * Load regions within current map bounds
-   */
   public loadRegionsInBounds(): void {
     this.mapService.loadRegionsInBounds();
   }
 
-  /**
-   * Clear all drawn shapes
-   */
   public clearAllShapes(): void {
     this.mapService.clearAllShapes();
-    this.drawnShapes = [];
   }
 
-  /**
-   * Get all shapes from the map
-   */
-  public getAllShapes(): GeoJSONFeature[] {
-    return this.mapService.getAllShapes();
-  }
-
-  /**
-   * Check if map is initialized
-   */
-  public isMapInitialized(): boolean {
-    return this.mapInitializedFlag;
-  }
-
-  /**
-   * Get the count of drawn shapes
-   */
   public getShapeCount(): number {
-    return this.drawnShapes.length;
+    return this.mapService.getAllShapes().length;
   }
 
-  /**
-   * Get the count of regions from backend
-   */
   public getRegionCount(): number {
     return this.regions.length;
+  }
+
+  public isMapInitialized(): boolean {
+    return this.mapService.isMapInitialized();
+  }
+
+  // Role-based methods
+  public saveCurrentShape(): void {
+    const shapes = this.mapService.getAllShapes();
+    if (shapes.length > 0) {
+      const lastShape = shapes[shapes.length - 1];
+      const name = `Region ${this.regions.length + 1}`;
+      this.saveShapeToBackend(lastShape, name);
+    }
+  }
+
+  public editRegions(): void {
+    // TODO: Implement region editing functionality
+    console.log('🔍 Edit regions functionality to be implemented');
+  }
+
+  public exportRegions(): void {
+    // TODO: Implement region export functionality
+    console.log('🔍 Export regions functionality to be implemented');
+  }
+
+  ngOnDestroy(): void {
+    this.mapService.destroyMap();
   }
 }

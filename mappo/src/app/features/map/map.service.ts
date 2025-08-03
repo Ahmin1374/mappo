@@ -45,7 +45,7 @@ export class MapService {
   public onRegionsLoaded = new EventEmitter<RegionDto[]>();
 
   // Default configuration for Germany
-  private defaultConfig: MapConfig = {
+  private defaultConfig: MapConfig = {  
     center: [51.1657, 10.4515], // Center of Germany
     zoom: 6,
     minZoom: 4,
@@ -145,7 +145,7 @@ export class MapService {
     // Bind events
     this.map.on(L.Draw.Event.CREATED, (event: any) => {
       this.handleShapeCreated(event);
-    });
+    });    
 
     this.map.on(L.Draw.Event.DELETED, (event: any) => {
       this.handleShapeDeleted(event);
@@ -173,7 +173,7 @@ export class MapService {
     event.layers.eachLayer((layer: L.Layer) => {
       // Extract ID from layer if available
       const layerId = (layer as any).options?.id || 'unknown';
-      this.onShapeDeleted.emit(layerId);
+            this.onShapeDeleted.emit(layerId);
     });
   }
 
@@ -372,7 +372,12 @@ export class MapService {
     if (this.map) {
       this.map.remove();
       this.map = null;
-      this.drawControl = null;
     }
+    this.drawnItems.clearLayers();
+    this.regionLayers.clear();
+  }
+
+  public isMapInitialized(): boolean {
+    return this.map !== null;
   }
 }
