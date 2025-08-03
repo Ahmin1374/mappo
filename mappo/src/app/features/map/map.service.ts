@@ -4,6 +4,11 @@ import 'leaflet-draw';
 import { RegionService, RegionDto } from '../../services/region.service';
 import { Observable } from 'rxjs';
 
+// Test if Leaflet is loaded
+console.log('🗺️ Leaflet loaded:', typeof L);
+console.log('🗺️ Leaflet version:', L.version);
+console.log('🗺️ Leaflet map function:', typeof L.map);
+
 export interface GeoJSONFeature {
   type: 'Feature';
   geometry: {
@@ -40,7 +45,7 @@ export class MapService {
   public onRegionsLoaded = new EventEmitter<RegionDto[]>();
 
   // Default configuration for Germany
-  private defaultConfig: MapConfig = {
+  private defaultConfig: MapConfig = {  
     center: [51.1657, 10.4515], // Center of Germany
     zoom: 6,
     minZoom: 4,
@@ -53,7 +58,11 @@ export class MapService {
    * Initialize the map in the specified container
    */
   public initializeMap(containerId: string, config?: Partial<MapConfig>): L.Map {
+    console.log('🗺️ MapService: Starting map initialization...');
+    console.log('🗺️ Container ID:', containerId);
+    
     const finalConfig = { ...this.defaultConfig, ...config };
+    console.log('🗺️ Final config:', finalConfig);
     
     // Create map instance
     this.map = L.map(containerId, {
@@ -62,20 +71,27 @@ export class MapService {
       minZoom: finalConfig.minZoom,
       maxZoom: finalConfig.maxZoom
     });
+    
+    console.log('🗺️ Map instance created:', this.map);
 
     // Add OpenStreetMap tiles
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors'
     }).addTo(this.map);
+    
+    console.log('🗺️ Tile layer added');
 
     // Initialize drawing controls
     this.initializeDrawControls();
+    console.log('🗺️ Drawing controls initialized');
 
     // Load existing regions
     this.loadRegions();
+    console.log('🗺️ Regions loading initiated');
 
     // Emit initialization event
     this.onMapInitialized.emit();
+    console.log('🗺️ Map initialization event emitted');
 
     return this.map;
   }
@@ -129,7 +145,7 @@ export class MapService {
     // Bind events
     this.map.on(L.Draw.Event.CREATED, (event: any) => {
       this.handleShapeCreated(event);
-    });
+    });    
 
     this.map.on(L.Draw.Event.DELETED, (event: any) => {
       this.handleShapeDeleted(event);
@@ -157,7 +173,7 @@ export class MapService {
     event.layers.eachLayer((layer: L.Layer) => {
       // Extract ID from layer if available
       const layerId = (layer as any).options?.id || 'unknown';
-      this.onShapeDeleted.emit(layerId);
+            this.onShapeDeleted.emit(layerId);
     });
   }
 
@@ -356,7 +372,12 @@ export class MapService {
     if (this.map) {
       this.map.remove();
       this.map = null;
-      this.drawControl = null;
     }
+    this.drawnItems.clearLayers();
+    this.regionLayers.clear();
+  }
+
+  public isMapInitialized(): boolean {
+    return this.map !== null;
   }
 }

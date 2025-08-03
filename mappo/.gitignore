@@ -45,3 +45,6 @@ Thumbs.db
 /postgisdata
 /postgres_data
 /pgadmin
+# Documentation (not to be pushed to repository)
+docs/code-documentation.md
+/docs/*

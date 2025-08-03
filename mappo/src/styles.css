@@ -1,1 +1,36 @@
 /* You can add global styles to this file, and also import other style files */
+
+/* Global styles for the application */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: #f8f9fa;
+}
+
+/* Ensure map container has proper dimensions */
+.map-view {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 400px !important;
+}
+
+/* Leaflet map container styles */
+.leaflet-container {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 400px !important;
+}
+
+/* Ensure proper z-index for map controls */
+.leaflet-control-draw {
+  z-index: 1000 !important;
+}
+
+.leaflet-control-zoom {
+  z-index: 1000 !important;
+}

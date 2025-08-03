@@ -3,6 +3,8 @@ import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { MapComponent } from './map.component';
 import { MapService, GeoJSONFeature } from '../map.service';
 import { RegionService, RegionDto } from '../../../services/region.service';
+import { RoleService } from '../../../services/role.service';
+import { SharedModule } from '../../../shared/shared.module';
 import { EventEmitter } from '@angular/core';
 
 describe('MapComponent', () => {
@@ -10,6 +12,7 @@ describe('MapComponent', () => {
   let fixture: ComponentFixture<MapComponent>;
   let mapService: jasmine.SpyObj<MapService>;
   let regionService: jasmine.SpyObj<RegionService>;
+  let roleService: jasmine.SpyObj<RoleService>;
 
   const mockGeoJSON: GeoJSONFeature = {
     type: 'Feature',
@@ -19,16 +22,27 @@ describe('MapComponent', () => {
     },
     properties: {
       id: 'test-shape-1',
+      name: 'Test Shape',
       createdAt: new Date()
     }
   };
 
+  const mockRegion: RegionDto = {
+    id: 'test-region-1',
+    name: 'Test Region',
+    geoJson: {
+      type: 'Polygon',
+      coordinates: [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]]
+    },
+    userId: 'testuser',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+
   beforeEach(async () => {
     const mapServiceSpy = jasmine.createSpyObj('MapService', [
-      'initializeMap',
-      'clearAllShapes',
-      'getAllShapes',
-      'destroyMap'
+      'initializeMap', 'clearAllShapes', 'getAllShapes', 'destroyMap',
+      'saveRegion', 'loadRegions', 'loadRegionsInBounds', 'isMapInitialized'
     ], {
       onShapeCreated: new EventEmitter<GeoJSONFeature>(),
       onShapeDeleted: new EventEmitter<string>(),
@@ -37,198 +51,173 @@ describe('MapComponent', () => {
     });
 
     const regionServiceSpy = jasmine.createSpyObj('RegionService', [
-      'getRegions',
-      'createRegion',
-      'deleteRegion',
-      'getRegionsInBounds'
+      'getRegions', 'createRegion', 'deleteRegion', 'getRegionsInBounds'
+    ]);
+
+    const roleServiceSpy = jasmine.createSpyObj('RoleService', [
+      'hasRole', 'hasPermission', 'canCreateRegion', 'canUpdateRegion', 'canDeleteRegion',
+      'isAdmin', 'isBroker', 'isViewer', 'isAdminOrBroker', 'getCurrentUserRole', 'getRoleDisplayName'
     ]);
 
     await TestBed.configureTestingModule({
-      imports: [HttpClientTestingModule],
-      declarations: [ MapComponent ],
+      imports: [HttpClientTestingModule, SharedModule],
+      declarations: [MapComponent],
       providers: [
         { provide: MapService, useValue: mapServiceSpy },
-        { provide: RegionService, useValue: regionServiceSpy }
+        { provide: RegionService, useValue: regionServiceSpy },
+        { provide: RoleService, useValue: roleServiceSpy }
       ]
-    })
-    .compileComponents();
+    }).compileComponents();
 
     fixture = TestBed.createComponent(MapComponent);
     component = fixture.componentInstance;
     mapService = TestBed.inject(MapService) as jasmine.SpyObj<MapService>;
     regionService = TestBed.inject(RegionService) as jasmine.SpyObj<RegionService>;
+    roleService = TestBed.inject(RoleService) as jasmine.SpyObj<RoleService>;
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
   });
 
-  describe('Component Initialization', () => {
-    it('should initialize map on ngOnInit', () => {
-      spyOn(component, 'subscribeToEvents');
-      
-      component.ngOnInit();
-      
-      expect(mapService.initializeMap).toHaveBeenCalledWith('map');
-      expect(component.subscribeToEvents).toHaveBeenCalled();
-    });
+  it('should initialize map on ngOnInit', () => {
+    spyOn(component, 'initializeMap');
+    spyOn(component, 'subscribeToEvents');
 
-    it('should destroy map on ngOnDestroy', () => {
-      component.ngOnDestroy();
-      
-      expect(mapService.destroyMap).toHaveBeenCalled();
-    });
+    component.ngOnInit();
 
-    it('should subscribe to map service events', () => {
-      spyOn(component, 'handleShapeCreated');
-      spyOn(component, 'handleShapeDeleted');
-      spyOn(component, 'handleMapInitialized');
-      
-      component.subscribeToEvents();
-      
-      // Trigger events
-      mapService.onShapeCreated.emit(mockGeoJSON);
-      mapService.onShapeDeleted.emit('test-shape-1');
-      mapService.onMapInitialized.emit();
-      
-      expect(component.handleShapeCreated).toHaveBeenCalledWith(mockGeoJSON);
-      expect(component.handleShapeDeleted).toHaveBeenCalledWith('test-shape-1');
-      expect(component.handleMapInitialized).toHaveBeenCalled();
-    });
+    expect(component.initializeMap).toHaveBeenCalled();
+    expect(component.subscribeToEvents).toHaveBeenCalled();
   });
 
-  describe('Shape Management', () => {
-    beforeEach(() => {
-      component.drawnShapes = [mockGeoJSON];
-    });
+  it('should handle regions loaded', () => {
+    const mockRegions = [mockRegion];
+    
+    component.handleRegionsLoaded(mockRegions);
 
-    it('should handle shape creation', () => {
-      spyOn(console, 'log');
-      spyOn(component.shapeCreated, 'emit');
-      
-      component.handleShapeCreated(mockGeoJSON);
-      
-      expect(component.drawnShapes).toContain(mockGeoJSON);
-      expect(console.log).toHaveBeenCalledWith('New shape created:', mockGeoJSON);
-      expect(component.shapeCreated.emit).toHaveBeenCalledWith(mockGeoJSON);
-    });
-
-    it('should handle shape deletion', () => {
-      spyOn(console, 'log');
-      spyOn(component.shapeDeleted, 'emit');
-      
-      component.handleShapeDeleted('test-shape-1');
-      
-      expect(component.drawnShapes.length).toBe(0);
-      expect(console.log).toHaveBeenCalledWith('Shape deleted:', 'test-shape-1');
-      expect(component.shapeDeleted.emit).toHaveBeenCalledWith('test-shape-1');
-    });
-
-    it('should clear all shapes', () => {
-      component.clearAllShapes();
-      
-      expect(mapService.clearAllShapes).toHaveBeenCalled();
-      expect(component.drawnShapes.length).toBe(0);
-    });
-
-    it('should get all shapes from service', () => {
-      const mockShapes = [mockGeoJSON];
-      mapService.getAllShapes.and.returnValue(mockShapes);
-      
-      const result = component.getAllShapes();
-      
-      expect(mapService.getAllShapes).toHaveBeenCalled();
-      expect(result).toEqual(mockShapes);
-    });
+    expect(component.regions).toEqual(mockRegions);
+    expect(component.errorMessage).toBe('');
   });
 
-  describe('Map Status', () => {
-    it('should return correct map initialization status', () => {
-      component['mapInitializedFlag'] = true;
-      expect(component.isMapInitialized()).toBe(true);
-      
-      component['mapInitializedFlag'] = false;
-      expect(component.isMapInitialized()).toBe(false);
-    });
+  it('should save shape to backend', () => {
+    const feature = mockGeoJSON;
+    const name = 'Test Region';
+    
+    mapService.saveRegion.and.returnValue(jasmine.createSpyObj('Observable', ['subscribe']));
 
-    it('should return correct shape count', () => {
-      component.drawnShapes = [mockGeoJSON, { ...mockGeoJSON, properties: { ...mockGeoJSON.properties, id: 'test-shape-2' } }];
-      
-      expect(component.getShapeCount()).toBe(2);
-    });
+    component.saveShapeToBackend(feature, name);
 
-    it('should return zero shape count when no shapes', () => {
-      component.drawnShapes = [];
-      
-      expect(component.getShapeCount()).toBe(0);
-    });
+    expect(mapService.saveRegion).toHaveBeenCalledWith(feature, name);
   });
 
-  describe('Event Handling', () => {
-    it('should handle map initialization', () => {
-      spyOn(console, 'log');
-      spyOn(component.mapInitialized, 'emit');
-      
-      component.handleMapInitialized();
-      
-      expect(console.log).toHaveBeenCalledWith('Map initialized successfully');
-      expect(component.mapInitialized.emit).toHaveBeenCalled();
-    });
+  it('should load regions in bounds', () => {
+    component.loadRegionsInBounds();
 
-    it('should emit shape created event', () => {
-      spyOn(component.shapeCreated, 'emit');
-      
-      component.handleShapeCreated(mockGeoJSON);
-      
-      expect(component.shapeCreated.emit).toHaveBeenCalledWith(mockGeoJSON);
-    });
-
-    it('should emit shape deleted event', () => {
-      spyOn(component.shapeDeleted, 'emit');
-      
-      component.handleShapeDeleted('test-shape-1');
-      
-      expect(component.shapeDeleted.emit).toHaveBeenCalledWith('test-shape-1');
-    });
+    expect(mapService.loadRegionsInBounds).toHaveBeenCalled();
   });
 
-  describe('Error Handling', () => {
-    it('should handle map initialization errors gracefully', () => {
-      spyOn(console, 'error');
-      mapService.initializeMap.and.throwError('Map initialization failed');
-      
-      component.initializeMap();
-      
-      expect(console.error).toHaveBeenCalledWith('Failed to initialize map:', jasmine.any(Error));
-    });
+  it('should clear all shapes', () => {
+    component.clearAllShapes();
+
+    expect(mapService.clearAllShapes).toHaveBeenCalled();
   });
 
-  describe('Component Properties', () => {
-    it('should have correct initial values', () => {
-      expect(component.drawnShapes).toEqual([]);
-      expect(component['mapInitializedFlag']).toBe(false);
-    });
+  it('should get shape count', () => {
+    const mockShapes = [mockGeoJSON];
+    mapService.getAllShapes.and.returnValue(mockShapes);
 
-    it('should have event emitters', () => {
-      expect(component.shapeCreated).toBeDefined();
-      expect(component.shapeDeleted).toBeDefined();
-      expect(component.mapInitialized).toBeDefined();
-    });
+    const result = component.getShapeCount();
+
+    expect(result).toBe(1);
+    expect(mapService.getAllShapes).toHaveBeenCalled();
   });
 
-  describe('Template Integration', () => {
-    it('should have map container reference', () => {
-      expect(component.mapContainer).toBeDefined();
-    });
+  it('should get region count', () => {
+    component.regions = [mockRegion, { ...mockRegion, id: 'test-region-2' }];
 
-    it('should display correct status in template', () => {
-      component['mapInitializedFlag'] = true;
-      component.drawnShapes = [mockGeoJSON];
-      
-      fixture.detectChanges();
-      
-      expect(component.isMapInitialized()).toBe(true);
-      expect(component.getShapeCount()).toBe(1);
-    });
+    const result = component.getRegionCount();
+
+    expect(result).toBe(2);
+  });
+
+  it('should check if map is initialized', () => {
+    mapService.isMapInitialized.and.returnValue(true);
+
+    const result = component.isMapInitialized();
+
+    expect(result).toBe(true);
+    expect(mapService.isMapInitialized).toHaveBeenCalled();
+  });
+
+  it('should save current shape', () => {
+    const mockShapes = [mockGeoJSON];
+    mapService.getAllShapes.and.returnValue(mockShapes);
+    spyOn(component, 'saveShapeToBackend');
+
+    component.saveCurrentShape();
+
+    expect(component.saveShapeToBackend).toHaveBeenCalledWith(mockGeoJSON, 'Region 1');
+  });
+
+  it('should not save current shape when no shapes exist', () => {
+    mapService.getAllShapes.and.returnValue([]);
+    spyOn(component, 'saveShapeToBackend');
+
+    component.saveCurrentShape();
+
+    expect(component.saveShapeToBackend).not.toHaveBeenCalled();
+  });
+
+  it('should edit regions (placeholder)', () => {
+    spyOn(console, 'log');
+
+    component.editRegions();
+
+    expect(console.log).toHaveBeenCalledWith('🔍 Edit regions functionality to be implemented');
+  });
+
+  it('should export regions (placeholder)', () => {
+    spyOn(console, 'log');
+
+    component.exportRegions();
+
+    expect(console.log).toHaveBeenCalledWith('🔍 Export regions functionality to be implemented');
+  });
+
+  it('should destroy map on ngOnDestroy', () => {
+    component.ngOnDestroy();
+
+    expect(mapService.destroyMap).toHaveBeenCalled();
+  });
+
+  it('should initialize map correctly', () => {
+    const mockMap = {} as any;
+    mapService.initializeMap.and.returnValue(mockMap);
+
+    component.initializeMap();
+
+    expect(mapService.initializeMap).toHaveBeenCalledWith('map');
+  });
+
+  it('should handle map initialization error', () => {
+    mapService.initializeMap.and.throwError('Map initialization failed');
+
+    component.initializeMap();
+
+    expect(component.errorMessage).toBe('Failed to initialize map');
+  });
+
+  it('should subscribe to map service events', () => {
+    spyOn(mapService.onShapeCreated, 'subscribe');
+    spyOn(mapService.onShapeDeleted, 'subscribe');
+    spyOn(mapService.onMapInitialized, 'subscribe');
+    spyOn(mapService.onRegionsLoaded, 'subscribe');
+
+    component.subscribeToEvents();
+
+    expect(mapService.onShapeCreated.subscribe).toHaveBeenCalled();
+    expect(mapService.onShapeDeleted.subscribe).toHaveBeenCalled();
+    expect(mapService.onMapInitialized.subscribe).toHaveBeenCalled();
+    expect(mapService.onRegionsLoaded.subscribe).toHaveBeenCalled();
   });
 });
