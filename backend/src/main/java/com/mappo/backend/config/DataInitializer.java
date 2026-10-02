@@ -3,13 +3,17 @@ package com.mappo.backend.config;
 import com.mappo.backend.model.User;
 import com.mappo.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
-import java.util.UUID;
-
+/**
+ * Seeds demo users (one per role) for local development.
+ * Only runs when {@code app.demo-users.password} is set (env: DEMO_USER_PASSWORD).
+ */
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {
@@ -17,29 +21,32 @@ public class DataInitializer implements CommandLineRunner {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
+    @Value("${app.demo-users.password:}")
+    private String demoPassword;
+
     @Override
-    public void run(String... args) throws Exception {
-        // Create test users with different roles if they don't exist
-        createUserIfNotExists("testuser", "password", "USER");
-        createUserIfNotExists("admin", "password", "ADMIN");
-        createUserIfNotExists("broker", "password", "BROKER");
-        createUserIfNotExists("viewer", "password", "VIEWER");
+    public void run(String... args) {
+        if (demoPassword == null || demoPassword.isBlank()) {
+            log.info("Demo users disabled (DEMO_USER_PASSWORD not set)");
+            return;
+        }
+        createUserIfNotExists("testuser", "USER");
+        createUserIfNotExists("admin", "ADMIN");
+        createUserIfNotExists("broker", "BROKER");
+        createUserIfNotExists("viewer", "VIEWER");
     }
 
-    private void createUserIfNotExists(String username, String password, String role) {
-        if (!userRepository.findByUsername(username).isPresent()) {
-            User user = new User();
-            // Don't set explicit UUID - let JPA generate it
-            user.setUsername(username);
-            user.setPassword(passwordEncoder.encode(password));
-            user.setRole(role);
-            user.setEnabled(true);
-            // createdAt will be set automatically by @PrePersist
-            
-            userRepository.save(user);
-            System.out.println("✅ Test user created: " + username + " / " + password + " (Role: " + role + ")");
-        } else {
-            System.out.println("ℹ️ Test user already exists: " + username);
+    private void createUserIfNotExists(String username, String role) {
+        if (userRepository.findByUsername(username).isPresent()) {
+            log.debug("Demo user already exists: {}", username);
+            return;
         }
+        User user = new User();
+        user.setUsername(username);
+        user.setPassword(passwordEncoder.encode(demoPassword));
+        user.setRole(role);
+        user.setEnabled(true);
+        userRepository.save(user);
+        log.info("Demo user created: {} (role {})", username, role);
     }
-} 
+}

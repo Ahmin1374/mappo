@@ -45,7 +45,9 @@ class RegionIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
+        mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
+                .defaultRequest(get("/").contextPath("/api/v1"))
+                .build();
         testUserId = UUID.randomUUID();
         testRegionDto = createTestRegionDto();
     }

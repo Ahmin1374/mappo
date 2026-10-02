@@ -1,13 +1,4 @@
 <div class="map-container">
-  <!-- Role-based Debug Info -->
-  <div *appRole="'ADMIN'" style="background: yellow; padding: 10px; margin: 10px;">
-    <strong>Admin Debug Info:</strong>
-    <br>Map Initialized: {{ isMapInitialized() }}
-    <br>Shape Count: {{ getShapeCount() }}
-    <br>Region Count: {{ getRegionCount() }}
-    <br>Error: {{ errorMessage }}
-  </div>
-
   <!-- Map Status Bar -->
   <div class="map-status-bar">
     <div class="status-item">
@@ -101,10 +92,7 @@
     #mapContainer 
     id="map" 
     class="map-view"
-    style="border: 2px solid red; min-height: 400px;">
-    <div style="padding: 20px; text-align: center; color: red;">
-      Map Container - If you see this, the map hasn't loaded yet
-    </div>
+    style="min-height: 400px;">
   </div>
 
   <!-- Instructions Panel -->

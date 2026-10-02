@@ -14,6 +14,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
@@ -27,6 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @ActiveProfiles("test")
+@Transactional
 class RegionControllerSecurityTest {
 
     @Autowired
@@ -54,6 +56,7 @@ class RegionControllerSecurityTest {
     void setUp() {
         mockMvc = MockMvcBuilders
                 .webAppContextSetup(context)
+                .defaultRequest(get("/").contextPath("/api/v1"))
                 .apply(springSecurity())
                 .build();
 
@@ -64,33 +67,30 @@ class RegionControllerSecurityTest {
     private void createTestUsers() {
         // Admin user
         adminUser = new User();
-        adminUser.setId(UUID.randomUUID());
         adminUser.setUsername("admin");
         adminUser.setPassword(passwordEncoder.encode("password"));
         adminUser.setRole("ADMIN");
         adminUser.setEnabled(true);
         adminUser.setCreatedAt(LocalDateTime.now());
-        userRepository.save(adminUser);
+        adminUser = userRepository.save(adminUser);
 
         // Broker user
         brokerUser = new User();
-        brokerUser.setId(UUID.randomUUID());
         brokerUser.setUsername("broker");
         brokerUser.setPassword(passwordEncoder.encode("password"));
         brokerUser.setRole("BROKER");
         brokerUser.setEnabled(true);
         brokerUser.setCreatedAt(LocalDateTime.now());
-        userRepository.save(brokerUser);
+        brokerUser = userRepository.save(brokerUser);
 
         // Viewer user
         viewerUser = new User();
-        viewerUser.setId(UUID.randomUUID());
         viewerUser.setUsername("viewer");
         viewerUser.setPassword(passwordEncoder.encode("password"));
         viewerUser.setRole("VIEWER");
         viewerUser.setEnabled(true);
         viewerUser.setCreatedAt(LocalDateTime.now());
-        userRepository.save(viewerUser);
+        viewerUser = userRepository.save(viewerUser);
     }
 
     @Test

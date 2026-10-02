@@ -169,19 +169,11 @@ describe('MapComponent', () => {
   });
 
   it('should edit regions (placeholder)', () => {
-    spyOn(console, 'log');
-
-    component.editRegions();
-
-    expect(console.log).toHaveBeenCalledWith('🔍 Edit regions functionality to be implemented');
+    expect(() => component.editRegions()).not.toThrow();
   });
 
   it('should export regions (placeholder)', () => {
-    spyOn(console, 'log');
-
-    component.exportRegions();
-
-    expect(console.log).toHaveBeenCalledWith('🔍 Export regions functionality to be implemented');
+    expect(() => component.exportRegions()).not.toThrow();
   });
 
   it('should destroy map on ngOnDestroy', () => {
