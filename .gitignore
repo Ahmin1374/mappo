@@ -1,0 +1,10 @@
+# Local environment
+.env
+
+# Docker volumes
+postgisdata/
+pgadmin/
+
+# OS / editor
+.DS_Store
+Thumbs.db
