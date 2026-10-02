@@ -23,38 +23,27 @@ export class MapComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    console.log('🔍 MapComponent ngOnInit called');
-    console.log('🔍 MapContainer element:', this.mapContainer);
-    console.log('🔍 MapContainer nativeElement:', this.mapContainer?.nativeElement);
     this.initializeMap();
     this.subscribeToEvents();
   }
 
   public initializeMap(): void {
     try {
-      console.log('🔍 Initializing map...');
-      console.log('🔍 Map container element:', this.mapContainer.nativeElement);
-      console.log('🔍 Map container ID:', this.mapContainer.nativeElement.id);
-      
       this.mapService.initializeMap(this.mapContainer.nativeElement.id);
-      console.log('🔍 Map initialization completed');
     } catch (error) {
-      console.error('🔍 Error initializing map:', error);
+      console.error('Error initializing map:', error);
       this.errorMessage = 'Failed to initialize map';
     }
   }
 
   public subscribeToEvents(): void {
     this.mapService.onShapeCreated.subscribe((feature: GeoJSONFeature) => {
-      console.log('🔍 Shape created:', feature);
     });
 
     this.mapService.onShapeDeleted.subscribe((shapeId: string) => {
-      console.log('🔍 Shape deleted:', shapeId);
     });
 
     this.mapService.onMapInitialized.subscribe(() => {
-      console.log('🔍 Map initialized event received');
     });
 
     this.mapService.onRegionsLoaded.subscribe((regions: RegionDto[]) => {
@@ -63,7 +52,6 @@ export class MapComponent implements OnInit, OnDestroy {
   }
 
   public handleRegionsLoaded(regions: RegionDto[]): void {
-    console.log('🔍 Regions loaded:', regions);
     this.regions = regions;
     this.errorMessage = '';
   }
@@ -74,12 +62,11 @@ export class MapComponent implements OnInit, OnDestroy {
 
     this.mapService.saveRegion(feature, name).subscribe({
       next: (region) => {
-        console.log('🔍 Region saved:', region);
         this.regions.push(region);
         this.loading = false;
       },
       error: (error) => {
-        console.error('🔍 Error saving region:', error);
+        console.error('Error saving region:', error);
         this.errorMessage = 'Failed to save region';
         this.loading = false;
       }
@@ -118,12 +105,10 @@ export class MapComponent implements OnInit, OnDestroy {
 
   public editRegions(): void {
     // TODO: Implement region editing functionality
-    console.log('🔍 Edit regions functionality to be implemented');
   }
 
   public exportRegions(): void {
     // TODO: Implement region export functionality
-    console.log('🔍 Export regions functionality to be implemented');
   }
 
   ngOnDestroy(): void {
